@@ -1,5 +1,5 @@
 diff --git a/node_modules/@observablehq/inputs/dist/index.js b/node_modules/@observablehq/inputs/dist/index.js
-index 04062e0..2492099 100644
+index 04062e0..b8f45b0 100644
 --- a/node_modules/@observablehq/inputs/dist/index.js
 +++ b/node_modules/@observablehq/inputs/dist/index.js
 @@ -1100,7 +1100,7 @@ function initialize(
@@ -11,9 +11,3 @@ index 04062e0..2492099 100644
    if (rules.length) return `#${id} tr>:nth-child(${i + 2}){${rules.join(";")}}`;
  }).filter(identity).join("\n")}</style>`);
    function appendRows(i, j) {
-@@ -1519,3 +1519,4 @@ function eventof(input) {
- }
- 
- export { bind, button, checkbox, color, date, datetime, disposal, email, fileOf, form, formatAuto, formatDate$1 as formatDate, formatLocaleAuto, formatLocaleNumber, formatNumber, formatTrim, input, number, password, radio, range, search, searchFilter, select, table, tel, text, textarea, toggle, url };
-+console.log('YOOOOO')
-\ No newline at end of file

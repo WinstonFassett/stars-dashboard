@@ -21,12 +21,9 @@ const text = d3.text('https://raw.githubusercontent.com/WinstonFassett/stars/mai
 // const stars = data.csv({typed: true})
 const data = text.then(text => {
   const cleaned =  cleanCsvHeader(text)
-  console.log({ text, cleaned })
   const parsed = d3.csvParse(cleaned, d3.autoType)
-  console.log({ parsed })
   return parsed;
 }).then(data => {
-  console.log({ data })
   return data.map(({ owner_avatar_url: avatar, full_name, description, stargazers_count, language, license_name, topics, homepage, starred_at, ...rest  }) => ({ avatar, full_name, description, stargazers_count, language, license_name, topics, homepage, starred_at, ...rest  }))
 })
 
