@@ -1,4 +1,5 @@
 {
+  "name": "stars-dashboard",
   "type": "module",
   "private": true,
   "scripts": {

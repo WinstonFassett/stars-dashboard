@@ -1,4 +1,6 @@
-# Observable Framework 1
+# Starred Repos Dashboard
+
+Searchable, sortable dashboard of my starred repos, sourced from [WinstonFassett/stars/stars.csv](https://github.com/WinstonFassett/stars/blob/main/stars.csv)
 
 This is an [Observable Framework](https://observablehq.com/framework) project. To start the local preview server, run:
 
