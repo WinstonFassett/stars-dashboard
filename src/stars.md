@@ -95,7 +95,7 @@ function sparkbar(max) {
 }
 ```
 
-## Raw Data 
+<!-- ## Raw Data 
 ```js
 display(search)
-```
+``` -->
