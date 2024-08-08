@@ -1,0 +1,12 @@
+.DS_Store
+/dist/
+node_modules/
+yarn-error.log
+src
+older
+package-lock.json
+package.json
+README.md
+observablehq.config.js
+patches
+

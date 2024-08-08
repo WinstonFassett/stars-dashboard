@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Stars | Observable Framework 1</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Source+Serif+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&amp;display=swap" crossorigin>
+<link rel="preload" as="style" href="./_observablehq/theme-air,near-midnight,alt,wide.css">
+<link rel="preload" as="style" href="./_observablehq/stdlib/inputs.css">
+<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Source+Serif+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&amp;display=swap" crossorigin>
+<link rel="stylesheet" type="text/css" href="./_observablehq/theme-air,near-midnight,alt,wide.css">
+<link rel="stylesheet" type="text/css" href="./_observablehq/stdlib/inputs.css">
+<link rel="modulepreload" href="./_observablehq/client.js">
+<link rel="modulepreload" href="./_observablehq/runtime.js">
+<link rel="modulepreload" href="./_observablehq/stdlib.js">
+<link rel="modulepreload" href="./_npm/d3@7.9.0/_esm.js">
+<link rel="modulepreload" href="./_npm/htl@0.3.1/_esm.js">
+<link rel="modulepreload" href="./_observablehq/stdlib/inputs.js">
+<link rel="modulepreload" href="./_npm/isoformat@0.2.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-array@3.2.4/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-axis@3.0.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-brush@3.0.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-chord@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-color@3.1.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-contour@4.0.2/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-delaunay@6.0.4/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-dispatch@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-drag@3.0.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-dsv@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-ease@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-fetch@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-force@3.0.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-format@3.1.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-geo@3.1.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-hierarchy@3.1.2/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-interpolate@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-path@3.1.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-polygon@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-quadtree@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-random@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-scale@4.0.2/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-scale-chromatic@3.1.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-selection@3.0.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-shape@3.2.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-time@3.1.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-time-format@4.1.0/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-timer@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-transition@3.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/d3-zoom@3.0.0/_esm.js">
+<link rel="modulepreload" href="./_npm/internmap@2.0.3/_esm.js">
+<link rel="modulepreload" href="./_npm/delaunator@5.0.1/_esm.js">
+<link rel="modulepreload" href="./_npm/robust-predicates@3.0.2/_esm.js">
+<link rel="icon" href="./_file/observable.1af93621.png" type="image/png" sizes="32x32">
+<script type="module">
+
+import {define} from "./_observablehq/client.js";
+
+define({id: "36b263bd", inputs: ["d3"], outputs: ["cleanCsvHeader","text","data"], body: (d3) => {
+function cleanCsvHeader(csvString) {
+  // Split the CSV string into lines
+  const lines = csvString.split('\n');
+  // Clean up the header row by trimming spaces
+  const cleanedHeader = lines[0].split(',').map(header => header.trim()).join(',');
+  // Combine the cleaned header with the rest of the CSV lines
+  lines[0] = cleanedHeader;
+  return lines.join('\n');
+}
+
+const text = d3.text('https://raw.githubusercontent.com/WinstonFassett/stars/main/stars.csv')
+// const stars = data.csv({typed: true})
+const data = text.then(text => {
+  const cleaned =  cleanCsvHeader(text)
+  const parsed = d3.csvParse(cleaned, d3.autoType)
+  return parsed;
+}).then(data => {
+  return data.map(({ owner_avatar_url: avatar, full_name, description, stargazers_count, language, license_name, topics, homepage, starred_at, ...rest  }) => ({ avatar, full_name, description, stargazers_count, language, license_name, topics, homepage, starred_at, ...rest  }))
+})
+
+
+return {cleanCsvHeader,text,data};
+}});
+
+define({id: "86a91bcd", inputs: ["view","Inputs","data","htl"], outputs: ["search","avatar","link","dateFormat"], body: (view,Inputs,data,htl) => {
+const search = view(Inputs.search(data, {placeholder: "Search data…"}));
+
+function avatar (x) {
+  const size = 20
+  return  htl.html`<img src="${x}" style="height: ${size}px; width: ${size}px;" />`
+}
+const link = url => htl.html`<a href="${url}">${url}</a>`
+const dateFormat = x => x.toLocaleString(undefined, {
+  month: "numeric",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric", 
+  minute: "numeric", 
+  second: "numeric"
+})
+return {search,avatar,link,dateFormat};
+}});
+
+define({id: "9947fa08", mode: "inline", inputs: ["resize","Inputs","search","link","avatar","dateFormat","display"], body: async (resize,Inputs,search,link,avatar,dateFormat,display) => {
+display(await(
+resize(width => (Inputs.table(search, { 
+    select: false,
+    rows: 20,
+    width: {
+      avatar: 20,
+      full_name: Math.max(150, width * .3),
+      'description': Math.max(150, width * .3),
+      'topics': Math.max(150, width * .3),
+      'license_name': 100,
+      stargazers_count: 80,
+      forks_count: 50,
+      homepage: 150
+    }, 
+    format: {
+      full_name: full_name => link(`https://github.com/${full_name}`),
+      avatar: avatar,
+      homepage: link,
+      starred_at: dateFormat,
+      created_at: dateFormat,
+      updated_at: dateFormat,
+      pushed_at: dateFormat
+    },
+    maxWidth: width,  })))
+))
+}});
+
+define({id: "d376c429", inputs: ["htl"], outputs: ["sparkbar"], body: (htl) => {
+function sparkbar(max) {
+  return (x) => htl.html`<div style="
+    background: var(--theme-green);
+    color: black;
+    font: 10px/1.6 var(--sans-serif);
+    width: ${100 * x / max}%;
+    float: right;
+    padding-right: 3px;
+    box-sizing: border-box;
+    overflow: visible;
+    display: flex;
+    justify-content: end;">${x.toLocaleString("en-US")}`
+}
+return {sparkbar};
+}});
+
+</script>
+<div id="observablehq-center">
+<main id="observablehq-main" class="observablehq">
+<h1 id="stars" tabindex="-1"><a class="observablehq-header-anchor" href="#stars">Stars</a></h1>
+<div class="observablehq observablehq--block"><!--:36b263bd:--></div>
+<div class="observablehq observablehq--block"><!--:86a91bcd:--></div>
+<div class="grid grid-cols-1">
+  <div class="card"><observablehq-loading></observablehq-loading><!--:9947fa08:--></div>
+</div>
+<div class="observablehq observablehq--block"><!--:d376c429:--></div>
+<!-- ## Raw Data 
+```js
+display(search)
+``` --></main>
+<footer id="observablehq-footer">
+<nav><a rel="prev" href="./"><span>Observable Framework 1</span></a></nav>
+<div>Built with <a href="https://observablehq.com/" target="_blank" rel="noopener noreferrer">Observable</a> on <a title="2024-08-08T17:35:07">Aug 8, 2024</a>.</div>
+</footer>
+</div>
