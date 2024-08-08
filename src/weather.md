@@ -5,6 +5,16 @@ toc: false
 
 # Weather report
 
+```jsx
+function Greeting({subject}) {
+  return <div>Hello, <b>{subject}</b>!</div>
+}
+```
+
+```jsx
+display(<Greeting subject="JSX" />);
+```
+
 
 ```js
 const forecast = FileAttachment("./data/forecast.json").json();

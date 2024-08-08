@@ -22,15 +22,33 @@ const text = d3.text('https://raw.githubusercontent.com/WinstonFassett/stars/mai
 const data = text.then(text => {
   const cleaned =  cleanCsvHeader(text)
   console.log({ text, cleaned })
-  const parsed = d3.csvParse(cleaned)
+  const parsed = d3.csvParse(cleaned, d3.autoType)
   console.log({ parsed })
   return parsed;
+}).then(data => {
+  console.log({ data })
+  return data.map(({ owner_avatar_url: avatar, full_name, description, stargazers_count, language, license_name, topics, homepage, starred_at, ...rest  }) => ({ avatar, full_name, description, stargazers_count, language, license_name, topics, homepage, starred_at, ...rest  }))
 })
+
 
 ```
 
 ```js
 const search = view(Inputs.search(data, {placeholder: "Search data…"}));
+
+function avatar (x) {
+  const size = 20
+  return  htl.html`<img src="${x}" style="height: ${size}px; width: ${size}px;" />`
+}
+const link = url => htl.html`<a href="${url}">${url}</a>`
+const dateFormat = x => x.toLocaleString(undefined, {
+  month: "numeric",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric", 
+  minute: "numeric", 
+  second: "numeric"
+})
 ```
 
 
@@ -38,8 +56,8 @@ const search = view(Inputs.search(data, {placeholder: "Search data…"}));
   <div class="card">${resize(width => (Inputs.table(search, { 
     select: false,
     rows: 20,
-    //columns: ['topics', 'homepage'],
     width: {
+      avatar: 20,
       full_name: Math.max(150, width * .3),
       'description': Math.max(150, width * .3),
       'topics': Math.max(150, width * .3),
@@ -48,6 +66,15 @@ const search = view(Inputs.search(data, {placeholder: "Search data…"}));
       forks_count: 50,
       homepage: 150
     }, 
+    format: {
+      full_name: full_name => link(`https://github.com/${full_name}`),
+      avatar: avatar,
+      homepage: link,
+      starred_at: dateFormat,
+      created_at: dateFormat,
+      updated_at: dateFormat,
+      pushed_at: dateFormat
+    },
     maxWidth: width,  })))}</div>
 </div>
 
