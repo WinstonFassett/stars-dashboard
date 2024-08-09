@@ -5,7 +5,14 @@ import {html} from "npm:htl";
 // import plotly from 'npm:plotly.js'
 // import Plotly from 
 
+
+
 ```
+
+```js
+import data from './data/stars.js'
+```
+
 
 <link rel="stylesheet" href="npm:jquery-ui/dist/themes/base/jquery-ui.css">
 
@@ -26,7 +33,7 @@ import {html} from "npm:htl";
 }  
 </style>
 
-```js echo
+```js 
 const $ = (await import( "npm:jquery")).default;
 // const d3 = await import('');
 // self.d3 = d3
@@ -56,14 +63,11 @@ $(() => {
       $.pivotUtilities.d3_renderers);
     console.log({ renderers })
   $(dom).pivotUI(
-      [
-          {color: "blue", shape: "circle"},
-          {color: "red", shape: "triangle"}
-      ],
+      data,
       {
-          rows: ["color"],
-          cols: ["shape"],
-          rendererName: "Horizontal Stacked Bar Chart",
+          // rows: ["color"],
+          // cols: ["shape"],
+          // rendererName: "Horizontal Stacked Bar Chart",
           renderers: renderers          
       }
   );      
