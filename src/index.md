@@ -15,7 +15,7 @@ function avatar (x) {
   const size = 20
   return  htl.html`<img src="${x}" style="height: ${size}px; width: ${size}px;" />`
 }
-const link = url => htl.html`<a href="${url}">${url}</a>`
+const link = (url, label) => htl.html`<a href="${url}">${label}</a>`
 const dateFormat = x => x.toLocaleString(undefined, {
   month: "numeric",
   day: "numeric",
@@ -42,7 +42,7 @@ const dateFormat = x => x.toLocaleString(undefined, {
       homepage: 150
     }, 
     format: {
-      full_name: full_name => link(`https://github.com/${full_name}`),
+      full_name: full_name => link(`https://github.com/${full_name}`, full_name),
       avatar: avatar,
       homepage: link,
       starred_at: dateFormat,

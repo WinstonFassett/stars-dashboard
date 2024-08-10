@@ -17,7 +17,29 @@ const data = text.then(text => {
   const parsed = d3.csvParse(cleaned, d3.autoType)
   return parsed;
 }).then(data => {
-  return data.map(({ owner_avatar_url: avatar, full_name, description, stargazers_count, language, license_name, topics, homepage, starred_at, ...rest  }) => ({ avatar, full_name, description, stargazers_count, language, license_name, topics, homepage, starred_at, ...rest  }))
+  return data.map(({ 
+    owner_avatar_url: avatar, 
+    full_name, 
+    description, 
+    stargazers_count, 
+    language, license_name, 
+    topics, homepage, 
+    starred_at, 
+    html_url,
+    name,
+    ...rest  
+  }) => ({ 
+    avatar, 
+    full_name, 
+    description, 
+    stargazers_count, 
+    language, 
+    license_name, 
+    topics, 
+    homepage, 
+    starred_at, 
+    ...rest  
+  }))
 })
 
 export default data;
