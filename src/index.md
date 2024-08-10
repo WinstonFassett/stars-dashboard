@@ -2,7 +2,9 @@
 theme: dashboard
 ---
 ```js
+import $ from 'npm:jquery'
 import data from './data/stars.js'
+window.$ = $
 ```
 
 # Starred Repos
@@ -15,7 +17,7 @@ function avatar (x) {
   const size = 20
   return  htl.html`<img src="${x}" style="height: ${size}px; width: ${size}px;" />`
 }
-const link = (url, label) => htl.html`<a href="${url}">${label}</a>`
+const link = (url, label = url) => htl.html`<a href="${url}">${label}</a>`
 const dateFormat = x => x.toLocaleString(undefined, {
   month: "numeric",
   day: "numeric",
@@ -24,6 +26,27 @@ const dateFormat = x => x.toLocaleString(undefined, {
   minute: "numeric", 
   second: "numeric"
 })
+const csvTags = str => htl.html`<div>
+  ${str.split(', ').map((x, o) => {
+    const node = htl.html`<a href="#${x}">${x}</a>`
+    node.addEventListener('click', e => {
+      e.preventDefault()
+      e.stopPropagation()
+      const $input = $('[type="search"]')
+      console.log('click', x, $input)
+      const form = $input.closest('form')[0]
+      form.query = x
+      $input[0].dispatchEvent(new Event("input", {bubbles: true}));
+      // $input.val(x).trigger('input').trigger('change')
+    })
+    const nodes = [node]
+    if (o > 0) {
+      nodes.unshift(htl.html`<span>, </span>`)
+    }
+    return htl.html`${nodes}`
+  })}
+  
+</div>`
 ```
 
 
@@ -44,11 +67,12 @@ const dateFormat = x => x.toLocaleString(undefined, {
     format: {
       full_name: full_name => link(`https://github.com/${full_name}`, full_name),
       avatar: avatar,
-      homepage: link,
+      homepage: x => link(x),
       starred_at: dateFormat,
       created_at: dateFormat,
       updated_at: dateFormat,
-      pushed_at: dateFormat
+      pushed_at: dateFormat,
+      topics: csvTags,
     },
     maxWidth: width,  })))}</div>
 </div>
