@@ -46,9 +46,7 @@ await import('https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.23.0/plotly_re
 await import('https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.23.0/d3_renderers.min.js')
 ```
 
-# Languages
-
-## Treemap
+# Pivot
 
 ```js
 var dom = html`<div id="app" style="overflow:auto;"></div>`;

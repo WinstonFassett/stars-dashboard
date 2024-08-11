@@ -2070,22 +2070,73 @@ function addDirectionalScrollWithPreventDefault(root, scrollThreshold = 10) {
   );
 }
 
+async function loadInBatches(tableName, msql, source, coordinator, db) {
+  // Step 1: Slice the first 10 records and the rest of the data
+  const initialRows = source.slice(0, 10);
+  const remainingData = source.slice(10);
+
+  // Step 2: Create the table using the first 10 rows
+  await coordinator.exec([
+      msql.loadObjects(tableName, initialRows, { replace: true }).replace("json_format", "format")
+  ]);
+  
+  // Step 3: Get the connection
+  const conn = await coordinator.manager.db.getConnection();
+  const columns = Object.keys(initialRows[0]); // Assuming all rows have the same structure
+  const numColumns = columns.length;
+  const placeholders = Array(numColumns).fill('?').join(', ');
+  const insertQuery = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders})`;
+
+  // Prepare the statement
+  const stmt = await conn.prepare(insertQuery);
+
+  // Step 4: Batch the remaining data and insert
+  const batchSize = 10000;
+
+  for (let i = 0; i < remainingData.length; i += batchSize) {
+      const batch = remainingData.slice(i, i + batchSize);
+      console.log('batch', i, batch)
+      for (const row of batch) {
+          try {
+              const values = columns.map(column => row[column]);
+              await stmt.query(...values);
+          } catch (error) {
+              console.error(`Error inserting row at batch ${i}:`, error);
+          }
+      }
+  }
+
+  // Close the statement and connection
+  await stmt.close();
+  // await conn.close();
+}
+
+
 // lib/web.ts
 async function createQuak(source, options = {}) {
   let tableName = "df";
   let coordinator = new mc.Coordinator();
   let connector = mc.wasmConnector();
   let db = await connector.getDuckDB();
+  console.log({db})
   coordinator.databaseConnector(connector);
   let exec;
-  if (source) {
-    exec = source.endsWith(".csv") ? msql.loadCSV(tableName, source, { replace: true }) : source.endsWith(".json") ? msql.loadJSON(tableName, source, { replace: true }) : msql.loadParquet(tableName, source, { replace: true });
+  if (Array.isArray(source)) {
+    // console.log('data')
+    // exec = msql.loadObjects(tableName, [source[0], source[1], source[2]], { replace: true });
+    // exec = exec.replace("json_format", "format");
+    // await coordinator.exec([exec]);
+    // console.log({ coordinator })
+    // await loadObjects (msql, source, coordinat) 
+    await loadInBatches(tableName, msql, source, coordinator, db);
   } else {
-    console.log("no file specified");
-    exec = "";
-  }
-  exec = exec.replace("json_format", "format");
-  await coordinator.exec([exec]);
+    if (typeof source === "string") {
+      exec = source.endsWith(".csv") ? msql.loadCSV(tableName, source, { replace: true }) : source.endsWith(".json") ? msql.loadJSON(tableName, source, { replace: true }) : msql.loadParquet(tableName, source, { replace: true });
+    } else {
+    }
+    exec = exec.replace("json_format", "format");
+    await coordinator.exec([exec]);
+  } 
   let dt = await datatable(tableName, { coordinator, height: 500, ...options });
   let node = dt.node();
   console.log({ node });

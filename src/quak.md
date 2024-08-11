@@ -1,7 +1,8 @@
-
 ```js
 import {createQuak} from './components/table.js'
 ```
+
+# Quak
 
 <style>
   .observablehq--block {
@@ -9,9 +10,14 @@ import {createQuak} from './components/table.js'
   }
 </style>
 
+```js
+import data from './data/stars.js'
+```
 
-```js echo
-createQuak('https://raw.githubusercontent.com/WinstonFassett/stars/main/stars.csv', {
+```js
+createQuak(
+// 'https://raw.githubusercontent.com/WinstonFassett/stars/main/stars.csv'
+  data, {
   format: {
     topics: 'tags'
   }

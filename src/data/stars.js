@@ -22,7 +22,7 @@ function sessionStorageCache(key, loadFunction) {
 
 const csvUrl = 'https://raw.githubusercontent.com/WinstonFassett/stars/main/stars.csv'
 
-const text = sessionStorageCache('starsCsvData', () => d3.text(csvUrl))
+export const text = sessionStorageCache('starsCsvData', () => d3.text(csvUrl))
 
 const data = text.then(text => {
   const cleaned =  cleanCsvHeader(text)
