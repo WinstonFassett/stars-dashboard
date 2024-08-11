@@ -11,6 +11,10 @@ import {createQuak} from './components/table.js'
 
 
 ```js echo
-createQuak('https://raw.githubusercontent.com/WinstonFassett/stars/main/stars.csv')
+createQuak('https://raw.githubusercontent.com/WinstonFassett/stars/main/stars.csv', {
+  format: {
+    topics: 'tags'
+  }
+})
 
 ```

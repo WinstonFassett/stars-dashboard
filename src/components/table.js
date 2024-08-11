@@ -19,10 +19,10 @@ import * as msql from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-sql@0.10.0/+e
 // lib/clients/DataTable.ts
 import * as arrow2 from "https://esm.sh/apache-arrow@16.1.0";
 import {
-  MosaicClient as MosaicClient4,
+  MosaicClient as MosaicClient5,
   Selection as Selection2
 } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-core@0.10.0/+esm";
-import { desc, Query as Query4 } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-sql@0.10.0/+esm";
+import { desc, Query as Query5 } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-sql@0.10.0/+esm";
 import * as signals from "https://esm.sh/@preact/signals-core@1.6.1";
 import { html } from "https://esm.sh/htl@0.3.1";
 
@@ -980,6 +980,7 @@ var ValueCounts = class extends MosaicClient2 {
       let query = this.query(filters);
       if (this.#plot) {
         let data = await this.coordinator.query(query);
+        console.log("set valuecount plot data", data);
         this.#plot.data.value = data;
       }
     });
@@ -1003,6 +1004,7 @@ var ValueCounts = class extends MosaicClient2 {
     ).from("counts").groupby("key");
   }
   queryResult(data) {
+    console.log("ValueCounts queryResult", data);
     if (!this.#plot) {
       let plot = this.#plot = ValueCountsPlot(data);
       this.#el.appendChild(plot);
@@ -1032,16 +1034,538 @@ var ValueCounts = class extends MosaicClient2 {
   }
 };
 
+// lib/clients/TagCounts.ts
+import { clausePoint as clausePoint2, MosaicClient as MosaicClient3 } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-core@0.10.0/+esm";
+import {
+  column as column2,
+  count as count3,
+  Query as Query3,
+  sql as sql2,
+  sum as sum2
+} from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-sql@0.10.0/+esm";
+import { effect as effect5 } from "https://esm.sh/@preact/signals-core@1.6.1";
+
+// lib/utils/TagCountsPlot.ts
+import { effect as effect4, signal as signal3 } from "https://esm.sh/@preact/signals-core@1.6.1";
+function TagCountsPlot(data, {
+  width = 125,
+  height = 30,
+  marginBottom = 12,
+  marginRight = 2,
+  marginLeft = 2,
+  fillColor = "var(--primary)",
+  nullFillColor = "var(--secondary)",
+  backgroundBarColor = "rgb(226, 226, 226)"
+} = {}) {
+  let root = document.createElement("div");
+  root.style.position = "relative";
+  let container = document.createElement("div");
+  Object.assign(container.style, {
+    width: `${width}px`,
+    height: `${height}px`,
+    display: "flex",
+    borderRadius: "5px",
+    overflow: "hidden"
+  });
+  let bars = createBars2(data, {
+    width,
+    height,
+    marginRight,
+    marginLeft,
+    fillColor,
+    nullFillColor,
+    backgroundBarColor
+  });
+  for (let bar of bars.elements) {
+    container.appendChild(bar);
+  }
+  let text = createTextOutput2();
+  let hovering = signal3(void 0);
+  let selected = signal3(void 0);
+  let counts = signal3(data);
+  let hitArea = document.createElement("div");
+  Object.assign(hitArea.style, {
+    position: "absolute",
+    top: "0",
+    left: "-5px",
+    width: `${width + 10}px`,
+    height: `${height + marginBottom}px`,
+    backgroundColor: "rgba(255, 255, 255, 0.01)",
+    cursor: "pointer"
+  });
+  hitArea.addEventListener("mousemove", (event) => {
+    hovering.value = bars.nearestX(event);
+  });
+  hitArea.addEventListener("mouseout", () => {
+    hovering.value = void 0;
+  });
+  hitArea.addEventListener("mousedown", (event) => {
+    let next = bars.nearestX(event);
+    selected.value = selected.value === next ? void 0 : next;
+  });
+  effect4(() => {
+    text.textContent = bars.textFor(hovering.value ?? selected.value);
+    bars.render(counts.value, hovering.value, selected.value);
+  });
+  root.appendChild(container);
+  root.appendChild(text);
+  root.appendChild(hitArea);
+  return Object.assign(root, { selected, data: counts });
+}
+function createBar2(opts) {
+  let { title, fillColor, textColor, width, height } = opts;
+  let bar = document.createElement("div");
+  bar.title = title;
+  Object.assign(bar.style, {
+    background: createSplitBarFill2({
+      color: fillColor,
+      bgColor: "var(--moon-gray)",
+      frac: 50
+    }),
+    width: `${width}px`,
+    height: `${height}px`,
+    borderColor: "white",
+    borderWidth: "0px 1px 0px 0px",
+    borderStyle: "solid",
+    opacity: 1,
+    textAlign: "center",
+    position: "relative",
+    display: "flex",
+    overflow: "hidden",
+    alignItems: "center",
+    fontWeight: 400,
+    fontFamily: "var(--sans-serif)",
+    boxSizing: "border-box"
+  });
+  let span = document.createElement("span");
+  Object.assign(span.style, {
+    overflow: "hidden",
+    width: `calc(100% - 4px)`,
+    left: "0px",
+    position: "absolute",
+    padding: "0px 2px",
+    color: textColor
+  });
+  if (width > 10) {
+    span.textContent = title;
+  }
+  bar.appendChild(span);
+  return bar;
+}
+function prepareData2(data) {
+  let arr = data.toArray().toSorted((a, b) => b.total - a.total);
+  let total = arr.reduce((acc, d) => acc + d.total, 0);
+  console.log("ARR", arr);
+  const ret = {
+    bins: arr.filter(
+      (d) => d.key !== "__quak_null__" && d.key !== "__quak_unique__"
+    ),
+    nullCount: arr.find((d) => d.key === "__quak_null__")?.total ?? 0,
+    uniqueCount: arr.find((d) => d.key === "__quak_unique__")?.total ?? 0,
+    total
+  };
+  console.log("RET", ret);
+  return ret;
+}
+function createBars2(data, opts) {
+  let source = prepareData2(data);
+  let x = d3_exports.scaleLinear().domain([0, source.total]).range([opts.marginLeft, opts.width - opts.marginRight]);
+  let thresh = 20;
+  let bars = [];
+  for (let d of source.bins.slice(0, thresh)) {
+    let bar = createBar2({
+      title: d.key,
+      fillColor: opts.fillColor,
+      textColor: "white",
+      width: x(d.total),
+      height: opts.height
+    });
+    bars.push(Object.assign(bar, { data: d }));
+  }
+  let hoverBar = createVirtualSelectionBar2(opts);
+  let selectBar = createVirtualSelectionBar2(opts);
+  let virtualBar;
+  if (source.bins.length > thresh) {
+    let total = source.bins.slice(thresh).reduce(
+      (acc, d) => acc + d.total,
+      0
+    );
+    virtualBar = Object.assign(document.createElement("div"), {
+      title: "__quak_virtual__"
+    });
+    Object.assign(virtualBar.style, {
+      width: `${x(total)}px`,
+      height: "100%",
+      borderColor: "white",
+      borderWidth: "0px 1px 0px 0px",
+      borderStyle: "solid",
+      opacity: 1
+    });
+    let vbars = document.createElement("div");
+    Object.assign(vbars.style, {
+      width: "100%",
+      height: "100%",
+      background: `repeating-linear-gradient(to right, ${opts.fillColor} 0px, ${opts.fillColor} 1px, white 1px, white 2px)`
+    });
+    virtualBar.appendChild(vbars);
+    virtualBar.appendChild(hoverBar);
+    virtualBar.appendChild(selectBar);
+    Object.defineProperty(virtualBar, "data", {
+      value: source.bins.slice(thresh)
+    });
+    bars.push(virtualBar);
+  }
+  if (source.uniqueCount) {
+    let bar = createBar2({
+      title: "unique",
+      fillColor: opts.backgroundBarColor,
+      textColor: "var(--mid-gray)",
+      width: x(source.uniqueCount),
+      height: opts.height
+    });
+    bar.title = "__quak_unique__";
+    bars.push(Object.assign(bar, {
+      data: {
+        key: "__quak_unique__",
+        total: source.uniqueCount
+      }
+    }));
+  }
+  if (source.nullCount) {
+    let bar = createBar2({
+      title: "null",
+      fillColor: opts.nullFillColor,
+      textColor: "white",
+      width: x(source.nullCount),
+      height: opts.height
+    });
+    bar.title = "__quak_null__";
+    bars.push(Object.assign(bar, {
+      data: {
+        key: "__quak_null__",
+        total: source.uniqueCount
+      }
+    }));
+  }
+  let first = bars[0];
+  let last = bars[bars.length - 1];
+  if (first === last) {
+    first.style.borderRadius = "5px";
+  } else {
+    first.style.borderRadius = "5px 0px 0px 5px";
+    last.style.borderRadius = "0px 5px 5px 0px";
+  }
+  function virtualBin(key) {
+    assert(virtualBar);
+    let voffset = bars.slice(0, thresh).map((b) => b.getBoundingClientRect().width).reduce((a, b) => a + b, 0);
+    let vbins = virtualBar.data;
+    let rect = virtualBar.getBoundingClientRect();
+    let dx = rect.width / vbins.length;
+    let idx = vbins.findIndex((d) => d.key === key);
+    assert(idx !== -1, `key ${key} not found in virtual bins`);
+    return {
+      ...vbins[idx],
+      x: dx * idx + voffset
+    };
+  }
+  function reset(opactiy) {
+    bars.forEach((bar) => {
+      if (bar.title === "__quak_virtual__") {
+        let vbars = bar.firstChild;
+        vbars.style.opacity = opactiy.toString();
+        vbars.style.background = createVirtualBarRepeatingBackground2({
+          color: opts.fillColor
+        });
+      } else {
+        bar.style.opacity = opactiy.toString();
+        bar.style.background = createSplitBarFill2({
+          color: bar.title === "__quak_unique__" ? opts.backgroundBarColor : bar.title === "__quak_null__" ? opts.nullFillColor : opts.fillColor,
+          bgColor: opts.backgroundBarColor,
+          frac: 1
+        });
+      }
+      bar.style.borderColor = "white";
+      bar.style.borderWidth = "0px 1px 0px 0px";
+      bar.style.removeProperty("box-shadow");
+    });
+    bars[bars.length - 1].style.borderWidth = "0px";
+    hoverBar.style.visibility = "hidden";
+    selectBar.style.visibility = "hidden";
+  }
+  function hover(key, selected) {
+    let bar = bars.find((b) => b.data.key === key);
+    if (bar !== void 0) {
+      bar.style.opacity = "1";
+      return;
+    }
+    let vbin = virtualBin(key);
+    hoverBar.title = vbin.key;
+    hoverBar.data = vbin;
+    hoverBar.style.opacity = selected ? "0.25" : "1";
+    hoverBar.style.left = `${vbin.x}px`;
+    hoverBar.style.visibility = "visible";
+  }
+  function select2(key) {
+    let bar = bars.find((b) => b.data.key === key);
+    if (bar !== void 0) {
+      bar.style.opacity = "1";
+      bar.style.boxShadow = "inset 0 0 0 1.2px black";
+      return;
+    }
+    let vbin = virtualBin(key);
+    selectBar.style.opacity = "1";
+    selectBar.title = vbin.key;
+    selectBar.data = vbin;
+    selectBar.style.left = `${vbin.x}px`;
+    selectBar.style.visibility = "visible";
+  }
+  let counts = Object.fromEntries(
+    Array.from(data.toArray(), (d) => [d.key, d.total])
+  );
+  return {
+    elements: bars,
+    nearestX(event) {
+      let bar = nearestX2(event, bars);
+      if (!bar)
+        return;
+      if (bar.title !== "__quak_virtual__") {
+        return bar.data.key;
+      }
+      let rect = bar.getBoundingClientRect();
+      let mouseX = event.clientX - rect.left;
+      let data2 = bar.data;
+      let idx = Math.floor(mouseX / rect.width * data2.length);
+      return data2[idx].key;
+    },
+    render(data2, hovering, selected) {
+      reset(hovering || selected ? 0.4 : 1);
+      let update = Object.fromEntries(
+        Array.from(data2.toArray(), (d) => [d.key, d.total])
+      );
+      let total = Object.values(update).reduce((a, b) => a + b, 0);
+      for (let bar of bars) {
+        if (bar.title === "__quak_virtual__") {
+          let vbars = bar.firstChild;
+          vbars.style.background = createVirtualBarRepeatingBackground2({
+            color: total < source.total || selected ? opts.backgroundBarColor : opts.fillColor
+          });
+        } else {
+          let key = bar.data.key;
+          let frac = (update[key] ?? 0) / counts[key];
+          if (selected)
+            frac = key === selected ? frac : 0;
+          bar.style.background = createSplitBarFill2({
+            color: bar.title === "__quak_unique__" ? opts.backgroundBarColor : bar.title === "__quak_null__" ? opts.nullFillColor : opts.fillColor,
+            bgColor: opts.backgroundBarColor,
+            frac: isNaN(frac) ? 0 : frac
+          });
+        }
+      }
+      if (hovering !== void 0) {
+        hover(hovering, selected);
+      }
+      if (selected !== void 0) {
+        select2(selected);
+      }
+    },
+    textFor(key) {
+      if (key === void 0) {
+        let ncats = data.numRows;
+        return `${ncats.toLocaleString()} categor${ncats === 1 ? "y" : "ies"}`;
+      }
+      if (key === "__quak_unique__") {
+        return `${source.uniqueCount.toLocaleString()} unique value${source.uniqueCount === 1 ? "" : "s"}`;
+      }
+      if (key === "__quak_null__") {
+        return "null";
+      }
+      return key.toString();
+    }
+  };
+}
+function createTextOutput2() {
+  let node = document.createElement("div");
+  Object.assign(node.style, {
+    pointerEvents: "none",
+    height: "15px",
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    position: "absolute",
+    fontWeight: 400,
+    marginTop: "1.5px",
+    color: "var(--mid-gray)"
+  });
+  return node;
+}
+function createVirtualSelectionBar2(opts) {
+  let node = document.createElement("div");
+  Object.assign(node.style, {
+    position: "absolute",
+    top: "0",
+    width: "1.5px",
+    height: "100%",
+    backgroundColor: opts.fillColor,
+    pointerEvents: "none",
+    visibility: "hidden"
+  });
+  return Object.assign(node, {
+    data: { key: "", total: 0 }
+  });
+}
+function nearestX2({ clientX }, bars) {
+  for (let bar of bars) {
+    let rect = bar.getBoundingClientRect();
+    if (clientX >= rect.left && clientX <= rect.right) {
+      return bar;
+    }
+  }
+}
+function createSplitBarFill2(options) {
+  let { color, bgColor, frac } = options;
+  let p = frac * 100;
+  return `linear-gradient(to top, ${color} ${p}%, ${bgColor} ${p}%, ${bgColor} ${100 - p}%)`;
+}
+function createVirtualBarRepeatingBackground2({ color }) {
+  return `repeating-linear-gradient(to right, ${color} 0px, ${color} 1px, white 1px, white 2px)`;
+}
+
+// lib/clients/TagCounts.ts
+import { isNotDistinct } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-sql@0.10.0/+esm";
+import { literal } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-sql@0.10.0/+esm";
+var TagCounts = class extends MosaicClient3 {
+  #table;
+  #column;
+  #el = document.createElement("div");
+  #plot;
+  constructor(options) {
+    super(options.filterBy);
+    this.#table = options.table;
+    this.#column = options.column;
+  }
+  /*
+    Dimension query to adapt:
+  
+    select topic, count(full_name) as topic_count, sum(stargazers_count) as stargazers from
+  (
+  select full_name, stargazers_count,
+  UNNEST(string_split(topics, ',')) AS topic 
+  from stars
+  ) as repo_topics
+  group by topic
+  order by topic_count desc
+  
+    */
+  fields() {
+    const before = super.fields();
+    console.log("fields", before);
+    return [
+      // {
+      //   table: this.#source.table,
+      //   column: this.#source.column,
+      //   stats: ["min", "max"],
+      // },
+    ];
+  }
+  query(filter = []) {
+    console.log("QUERY", this.#column);
+    let tagRows = Query3.from({ source: this.#table }).select({
+      value: sql2`CASE 
+          WHEN ${column2(this.#column)} IS NULL THEN UNNEST(['__quak_null__'])
+          ELSE UNNEST(string_split(${column2(this.#column)}, ', '))
+        END`
+    }).where(filter);
+    let counts = Query3.with({ tagRows }).from("tagRows").select({
+      total: count3(),
+      // key: sql`CASE
+      //   WHEN "total" = 1 AND "value" != '__quak_null__' THEN '__quak_unique__'
+      //   ELSE "value"
+      // END`,
+      key: sql2`value`
+      // // value: sql`CASE
+      // //   WHEN ${column(this.#column)} IS NULL THEN '__quak_null__'
+      // //   ELSE value
+      // // END`,
+    }).groupby("key");
+    let result = Query3.with({ counts }).from("counts").select({
+      // key: "key",
+      key: sql2`CASE 
+          WHEN total = 1 AND "key" != '__quak_null__' THEN '__quak_unique__'
+          ELSE "key"
+        END`,
+      total: sum2("total")
+    }).groupby(sql2`CASE 
+        WHEN total = 1 AND "key" != '__quak_null__' THEN '__quak_unique__'
+        ELSE "key"
+      END`);
+    return result;
+  }
+  queryResult(data) {
+    if (!this.#plot) {
+      console.log("plotcounts", { data });
+      let plot = this.#plot = TagCountsPlot(data);
+      this.#el.appendChild(plot);
+      effect5(() => {
+        let clause = this.clause(plot.selected.value);
+        this.filterBy.update(clause);
+      });
+    } else {
+      console.log("set plot data", data);
+      this.#plot.data.value = data;
+    }
+    return this;
+  }
+  clause(value) {
+    console.log("clause", value);
+    let update = value === "__quak_null__" ? null : value;
+    const origClause = clausePoint2(
+      this.#column,
+      update,
+      {
+        source: this
+      }
+    );
+    console.log("origClause", origClause);
+    const queryText = `%${value}%`;
+    return {
+      meta: { type: "point" },
+      source: this,
+      clients: /* @__PURE__ */ new Set([this]),
+      // value: queryText,
+      // predicate: sql``
+      predicate: value === "__quak_null__" ? isNotDistinct(this.#column, null) : value !== void 0 ? like(this.#column, literal(queryText)) : null
+    };
+  }
+  reset() {
+    assert(this.#plot, "ValueCounts plot not initialized");
+    this.#plot.selected.value = void 0;
+  }
+  get plot() {
+    return {
+      node: () => this.#el
+    };
+  }
+};
+var binaryOp = (op) => (a, b) => sql2`(${asColumn(a)} ${op} ${asColumn(b)})`.annotate({ op, a, b, visit });
+var like = binaryOp(`like`);
+function visit(callback) {
+  callback(this.op, this);
+  this.children?.forEach((v) => v.visit(callback));
+}
+function asColumn(value) {
+  return typeof value === "string" ? column2(value) : value;
+}
+
 // lib/clients/DataTable.ts
-import { signal as signal4 } from "https://esm.sh/@preact/signals-core@1.6.1";
+import { signal as signal5 } from "https://esm.sh/@preact/signals-core@1.6.1";
 
 // lib/clients/styles.css?raw
 var styles_default = ':host {\n	all: initial;\n	--sans-serif: -apple-system, BlinkMacSystemFont, "avenir next", avenir, helvetica, "helvetica neue", ubuntu, roboto, noto, "segoe ui", arial, sans-serif;\n	--light-silver: #efefef;\n	--spacing-none: 0;\n	--white: #fff;\n	--gray: #929292;\n	--dark-gray: #333;\n	--moon-gray: #c4c4c4;\n	--mid-gray: #6e6e6e;\n\n	--stone-blue: #64748b;\n	--yellow-gold: #ca8a04;\n\n	--teal: #027982;\n	--dark-pink: #D35A5F;\n\n	--light-blue: #7E93CF;\n	--dark-yellow-gold: #A98447;\n\n	--purple: #987fd3;\n\n	--primary: var(--stone-blue);\n	--secondary: var(--yellow-gold);\n}\n\n.highlight {\n	background-color: var(--light-silver);\n}\n\n.highlight-cell {\n	border: 1px solid var(--moon-gray);\n}\n\n.quak {\n  border-radius: 0.2rem;\n  border: 1px solid var(--light-silver);\n  overflow-y: auto;\n}\n\ntable {\n  border-collapse: separate;\n  border-spacing: 0;\n  white-space: nowrap;\n  box-sizing: border-box;\n\n  margin: var(--spacing-none);\n  color: var(--dark-gray);\n  font: 13px / 1.2 var(--sans-serif);\n\n  width: 100%;\n}\n\nthead {\n  position: sticky;\n  vertical-align: top;\n  text-align: left;\n  top: 0;\n}\n\ntd {\n  border: 1px solid var(--light-silver);\n  border-bottom: solid 1px transparent;\n  border-right: solid 1px transparent;\n  overflow: hidden;\n  -o-text-overflow: ellipsis;\n  text-overflow: ellipsis;\n  padding: 4px 6px;\n}\n\ntr:first-child td {\n  border-top: solid 1px transparent;\n}\n\nth {\n  display: table-cell;\n  vertical-align: inherit;\n  font-weight: bold;\n  text-align: -internal-center;\n  unicode-bidi: isolate;\n\n  position: relative;\n  background: var(--white);\n  border-bottom: solid 1px var(--light-silver);\n  border-left: solid 1px var(--light-silver);\n  padding: 5px 6px;\n  user-select: none;\n}\n\n.number, .date {\n  font-variant-numeric: tabular-nums;\n}\n\n.gray {\n  color: var(--gray);\n}\n\n.number {\n  text-align: right;\n}\n\ntd:nth-child(1), th:nth-child(1) {\n  font-variant-numeric: tabular-nums;\n  text-align: center;\n  color: var(--moon-gray);\n  padding: 0 4px;\n}\n\ntd:first-child, th:first-child {\n  border-left: none;\n}\n\nth:first-child {\n  border-left: none;\n  vertical-align: top;\n  width: 20px;\n  padding: 7px;\n}\n\ntd:nth-last-child(2), th:nth-last-child(2) {\n  border-right: 1px solid var(--light-silver);\n}\n\ntr:first-child td {\n	border-top: solid 1px transparent;\n}\n\n.resize-handle {\n	width: 5px;\n	height: 100%;\n	background-color: transparent;\n	position: absolute;\n	right: -2.5px;\n	top: 0;\n	cursor: ew-resize;\n	z-index: 1;\n}\n\n.quak .sort-button {\n	cursor: pointer;\n	background-color: var(--white);\n	user-select: none;\n}\n\n.status-bar {\n	display: flex;\n	justify-content: flex-end;\n	font-family: var(--sans-serif);\n	margin-right: 10px;\n	margin-top: 5px;\n}\n\n.status-bar button {\n	border: none;\n	background-color: var(--white);\n	color: var(--primary);\n	font-weight: 600;\n	font-size: 0.875rem;\n	cursor: pointer;\n	margin-right: 5px;\n}\n\n.status-bar span {\n	color: var(--gray);\n	font-weight: 400;\n	font-size: 0.75rem;\n	font-variant-numeric: tabular-nums;\n}\n';
 
 // lib/clients/StatusBar.ts
-import { MosaicClient as MosaicClient3 } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-core@0.10.0/+esm";
-import { count as count3, Query as Query3 } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-sql@0.10.0/+esm";
-var StatusBar = class extends MosaicClient3 {
+import { MosaicClient as MosaicClient4 } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-core@0.10.0/+esm";
+import { count as count4, Query as Query4 } from "https://cdn.jsdelivr.net/npm/@uwdata/mosaic-sql@0.10.0/+esm";
+var StatusBar = class extends MosaicClient4 {
   #table;
   #el = document.createElement("div");
   #button;
@@ -1080,16 +1604,17 @@ var StatusBar = class extends MosaicClient3 {
     });
   }
   query(filter = []) {
-    let query = Query3.from(this.#table).select({ count: count3() }).where(filter);
+    console.log("statusbar query", this.#table, filter);
+    let query = Query4.from(this.#table).select({ count: count4() }).where(filter);
     return query;
   }
   queryResult(table) {
-    let count4 = Number(table.get(0)?.count ?? 0);
+    let count5 = Number(table.get(0)?.count ?? 0);
     if (!this.#totalRows) {
-      this.#totalRows = count4;
+      this.#totalRows = count5;
     }
-    let countStr = count4.toLocaleString();
-    if (count4 == this.#totalRows) {
+    let countStr = count5.toLocaleString();
+    if (count5 == this.#totalRows) {
       this.#span.innerText = `${countStr} rows`;
     } else {
       let totalStr = this.#totalRows.toLocaleString();
@@ -1112,17 +1637,18 @@ function isInteractor(x) {
 async function datatable(table, options = {}) {
   assert(options.coordinator, "Must provide a coordinator");
   let empty = await options.coordinator.query(
-    Query4.from(table).select(options.columns ?? ["*"]).limit(0).toString()
+    Query5.from(table).select(options.columns ?? ["*"]).limit(0).toString()
   );
   let client = new DataTable({
     table,
     schema: empty.schema,
-    height: options.height
+    height: options.height,
+    format: options.format
   });
   options.coordinator.connect(client);
   return client;
 }
-var DataTable = class extends MosaicClient4 {
+var DataTable = class extends MosaicClient5 {
   /** source of the data */
   #meta;
   /** for the component */
@@ -1157,7 +1683,7 @@ var DataTable = class extends MosaicClient4 {
   #format;
   /** @type {AsyncBatchReader<arrow.StructRowProxy> | null} */
   #reader = null;
-  #sql = signal4(void 0);
+  #sql = signal5(void 0);
   constructor(source) {
     super(Selection2.crossfilter());
     this.#format = formatof(source.schema);
@@ -1185,12 +1711,14 @@ var DataTable = class extends MosaicClient4 {
     });
   }
   get sql() {
+    console.log("get sql", this.#sql.value);
     return this.#sql.value;
   }
   fields() {
-    return this.#columns.map((column2) => ({
+    console.log("fields", this.#columns);
+    return this.#columns.map((column3) => ({
       table: this.#meta.table,
-      column: column2,
+      column: column3,
       stats: []
     }));
   }
@@ -1209,7 +1737,8 @@ var DataTable = class extends MosaicClient4 {
    * @param {Array<unknown>} filter
    */
   query(filter = []) {
-    let query = Query4.from(this.#meta.table).select(this.#columns).where(filter).orderby(
+    console.log("query", filter);
+    let query = Query5.from(this.#meta.table).select(this.#columns).where(filter).orderby(
       this.#orderby.filter((o) => o.order !== "unset").map((o) => o.order === "asc" ? asc(o.field) : desc(o.field))
     );
     this.#sql.value = query.clone().toString();
@@ -1220,6 +1749,7 @@ var DataTable = class extends MosaicClient4 {
    * Must be synchronous, and return `this`.
    */
   queryResult(table) {
+    console.log("query result", table);
     if (!this.#pendingInternalRequest) {
       this.#reader = new AsyncBatchReader(() => {
         this.#pendingInternalRequest = true;
@@ -1236,6 +1766,7 @@ var DataTable = class extends MosaicClient4 {
     return this;
   }
   update() {
+    console.log("update");
     if (!this.#pendingInternalRequest) {
       this.#appendRows(this.#rows * 2);
     }
@@ -1243,6 +1774,7 @@ var DataTable = class extends MosaicClient4 {
     return this;
   }
   requestData(offset = 0) {
+    console.log("request data", offset);
     this.#offset = offset;
     let query = this.query(this.filterBy?.predicate(this));
     this.requestQuery(query);
@@ -1250,6 +1782,7 @@ var DataTable = class extends MosaicClient4 {
   }
   fieldInfo(infos) {
     let classes = classof(this.#meta.schema);
+    console.log("field info", { infos, classes });
     {
       let statusBar = new StatusBar({
         table: this.#meta.table,
@@ -1281,7 +1814,17 @@ var DataTable = class extends MosaicClient4 {
       let info = infos.find((c) => c.column === field.name);
       assert(info, `No info for column ${field.name}`);
       let vis = void 0;
-      if (info.type === "number" || info.type === "date") {
+      const infoFormat = this.#meta.format?.[field.name];
+      if (infoFormat) {
+        console.log({ infoFormat });
+        if (infoFormat === "tags") {
+          vis = new TagCounts({
+            table: this.#meta.table,
+            column: field.name,
+            filterBy: this.filterBy
+          });
+        }
+      } else if (info.type === "number" || info.type === "date") {
         vis = new Histogram({
           table: this.#meta.table,
           column: field.name,
@@ -1528,7 +2071,7 @@ function addDirectionalScrollWithPreventDefault(root, scrollThreshold = 10) {
 }
 
 // lib/web.ts
-async function createQuak(source) {
+async function createQuak(source, options = {}) {
   let tableName = "df";
   let coordinator = new mc.Coordinator();
   let connector = mc.wasmConnector();
@@ -1543,7 +2086,7 @@ async function createQuak(source) {
   }
   exec = exec.replace("json_format", "format");
   await coordinator.exec([exec]);
-  let dt = await datatable(tableName, { coordinator, height: 500 });
+  let dt = await datatable(tableName, { coordinator, height: 500, ...options });
   let node = dt.node();
   console.log({ node });
   return node;
@@ -1551,5 +2094,3 @@ async function createQuak(source) {
 export {
   createQuak
 };
-
-console.log('ok')
